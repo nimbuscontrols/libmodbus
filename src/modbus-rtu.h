@@ -8,6 +8,7 @@
 #define MODBUS_RTU_H
 
 #include "modbus.h"
+#include "config.h"
 
 MODBUS_BEGIN_DECLS
 
