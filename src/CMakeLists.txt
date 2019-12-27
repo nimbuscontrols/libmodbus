@@ -22,3 +22,7 @@ install(TARGETS modbus modbusS
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/
         DESTINATION include/modbus
         FILES_MATCHING PATTERN "*.h*")
+
+install(DIRECTORY ${CMAKE_BINARY_DIR}/include/
+        DESTINATION include/modbus
+        FILES_MATCHING PATTERN "*.h*")
