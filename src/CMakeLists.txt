@@ -1,6 +1,6 @@
 set(SOURCE_FILES modbus.c
         modbus-data.c
-        modbus-rtu.c
+        modbus-gpio.c
         modbus-rtu.c
         modbus-tcp.c)
 

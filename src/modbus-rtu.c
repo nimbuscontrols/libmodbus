@@ -27,6 +27,10 @@
 #include <linux/serial.h>
 #endif
 
+#if BEAGLEBONE_RS485_CAPE
+    #include "modbus-gpio.h"
+#endif
+
 /* Table of CRC values for high-order byte */
 static const uint8_t table_crc_hi[] = {
     0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0,
@@ -274,6 +278,21 @@ static ssize_t _modbus_rtu_send(modbus_t *ctx, const uint8_t *req, int req_lengt
     DWORD n_bytes = 0;
     return (WriteFile(ctx_rtu->w_ser.fd, req, req_length, &n_bytes, NULL)) ? (ssize_t)n_bytes : -1;
 #else
+
+#if BEAGLEBONE_RS485_CAPE
+    uint8_t c;
+    /* Make input buffer empty */
+    while (read(ctx->s, &c, 1));
+
+    modbus_rtu_t *ctx_rtu = ctx->backend_data;
+    if (ctx_rtu->gpio >= 0)
+        gpio_set_value (ctx_rtu->gpio, 1);
+
+    if (ctx->debug) {
+        printf ("Setting GPIO %d to write mode\n", ctx_rtu->gpio);
+    }
+#else
+
 #if HAVE_DECL_TIOCM_RTS
     modbus_rtu_t *ctx_rtu = ctx->backend_data;
     if (ctx_rtu->rts != MODBUS_RTU_RTS_NONE) {
@@ -294,8 +313,9 @@ static ssize_t _modbus_rtu_send(modbus_t *ctx, const uint8_t *req, int req_lengt
         return size;
     } else {
 #endif
+#endif
         return write(ctx->s, req, req_length);
-#if HAVE_DECL_TIOCM_RTS
+#if HAVE_DECL_TIOCM_RTS && !BEAGLEBONE_RS485_CAPE
     }
 #endif
 #endif
@@ -895,6 +915,13 @@ static int _modbus_rtu_connect(modbus_t *ctx)
     }
 #endif
 
+#if BEAGLEBONE_RS485_CAPE
+    /* To use gpio instead of RTS */
+    if (ctx_rtu->gpio >= 0) {
+        gpio_export (ctx_rtu->gpio);
+        gpio_set_dir (ctx_rtu->gpio, 1);
+    }
+#endif
     return 0;
 }
 
@@ -984,7 +1011,7 @@ int modbus_rtu_get_rts(modbus_t *ctx)
     }
 
     if (ctx->backend->backend_type == _MODBUS_BACKEND_TYPE_RTU) {
-#if HAVE_DECL_TIOCM_RTS
+#if HAVE_DECL_TIOCM_RTS && !BEAGLEBONE_RS485_CAPE
         modbus_rtu_t *ctx_rtu = ctx->backend_data;
         return ctx_rtu->rts;
 #else
@@ -1008,7 +1035,7 @@ int modbus_rtu_set_rts(modbus_t *ctx, int mode)
     }
 
     if (ctx->backend->backend_type == _MODBUS_BACKEND_TYPE_RTU) {
-#if HAVE_DECL_TIOCM_RTS
+#if HAVE_DECL_TIOCM_RTS && !BEAGLEBONE_RS485_CAPE
         modbus_rtu_t *ctx_rtu = ctx->backend_data;
 
         if (mode == MODBUS_RTU_RTS_NONE || mode == MODBUS_RTU_RTS_UP ||
@@ -1036,6 +1063,42 @@ int modbus_rtu_set_rts(modbus_t *ctx, int mode)
     return -1;
 }
 
+int modbus_rtu_set_gpio_rts(modbus_t *ctx, int num)
+{
+    if (ctx == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    if (ctx->backend->backend_type == _MODBUS_BACKEND_TYPE_RTU) {
+        modbus_rtu_t *ctx_rtu = ctx->backend_data;
+
+        ctx_rtu->gpio = num;
+        return 0;
+    }
+    /* Wrong backend or invalid mode specified */
+    errno = EINVAL;
+    return -1;
+}
+
+int modbus_rtu_get_gpio_rts(modbus_t *ctx)
+{
+    if (ctx == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    if (ctx->backend->backend_type == _MODBUS_BACKEND_TYPE_RTU) {
+        modbus_rtu_t *ctx_rtu = ctx->backend_data;
+        return ctx_rtu->gpio;
+    }
+
+    errno = EINVAL;
+    return -1;
+}
+
+
+
 int modbus_rtu_set_custom_rts(modbus_t *ctx, void (*set_rts) (modbus_t *ctx, int on))
 {
     if (ctx == NULL) {
@@ -1044,7 +1107,7 @@ int modbus_rtu_set_custom_rts(modbus_t *ctx, void (*set_rts) (modbus_t *ctx, int
     }
 
     if (ctx->backend->backend_type == _MODBUS_BACKEND_TYPE_RTU) {
-#if HAVE_DECL_TIOCM_RTS
+#if HAVE_DECL_TIOCM_RTS && !BEAGLEBONE_RS485_CAPE
         modbus_rtu_t *ctx_rtu = ctx->backend_data;
         ctx_rtu->set_rts = set_rts;
         return 0;
@@ -1069,7 +1132,7 @@ int modbus_rtu_get_rts_delay(modbus_t *ctx)
     }
 
     if (ctx->backend->backend_type == _MODBUS_BACKEND_TYPE_RTU) {
-#if HAVE_DECL_TIOCM_RTS
+#if HAVE_DECL_TIOCM_RTS && !BEAGLEBONE_RS485_CAPE
         modbus_rtu_t *ctx_rtu;
         ctx_rtu = (modbus_rtu_t *)ctx->backend_data;
         return ctx_rtu->rts_delay;
@@ -1094,7 +1157,7 @@ int modbus_rtu_set_rts_delay(modbus_t *ctx, int us)
     }
 
     if (ctx->backend->backend_type == _MODBUS_BACKEND_TYPE_RTU) {
-#if HAVE_DECL_TIOCM_RTS
+#if HAVE_DECL_TIOCM_RTS && !BEAGLEBONE_RS485_CAPE
         modbus_rtu_t *ctx_rtu;
         ctx_rtu = (modbus_rtu_t *)ctx->backend_data;
         ctx_rtu->rts_delay = us;
@@ -1135,6 +1198,15 @@ static void _modbus_rtu_close(modbus_t *ctx)
         ctx->s = -1;
     }
 #endif
+
+#if BEAGLEBONE_RS485_CAPE
+    /* To use GPIO as RTS */
+    if (ctx_rtu->gpio >= 0) {
+        gpio_unexport(ctx_rtu->gpio);
+        if (ctx->debug)
+            printf ("Close gpio device num %d\n", ctx_rtu->gpio);
+    }
+#endif
 }
 
 static int _modbus_rtu_flush(modbus_t *ctx)
@@ -1164,6 +1236,21 @@ static int _modbus_rtu_select(modbus_t *ctx, fd_set *rset,
         return -1;
     }
 #else
+
+#if BEAGLEBONE_RS485_CAPE
+    /* To make sure every byte from buffer was sent to bus */
+    /* Probably on windows here should be something different but I don't know what */
+    tcdrain (ctx->s);
+    modbus_rtu_t *ctx_rtu = ctx->backend_data;
+    if (ctx_rtu->gpio >= 0) {
+        if (ctx->debug) {
+            printf ("Setting GPIO %d to read mode\n", ctx_rtu->gpio);
+        }
+        if (gpio_set_value (ctx_rtu->gpio, 0) && ctx->debug)
+            fprintf (stderr, "Problem with setting GPIO %d to 0\n", ctx_rtu->gpio);
+    }
+#endif
+
     while ((s_rc = select(ctx->s+1, rset, NULL, NULL, tv)) == -1) {
         if (errno == EINTR) {
             if (ctx->debug) {
@@ -1279,7 +1366,7 @@ modbus_t* modbus_new_rtu(const char *device,
     ctx_rtu->serial_mode = MODBUS_RTU_RS232;
 #endif
 
-#if HAVE_DECL_TIOCM_RTS
+#if HAVE_DECL_TIOCM_RTS && !BEAGLEBONE_RS485_CAPE
     /* The RTS use has been set by default */
     ctx_rtu->rts = MODBUS_RTU_RTS_NONE;
 
@@ -1294,6 +1381,10 @@ modbus_t* modbus_new_rtu(const char *device,
 #endif
 
     ctx_rtu->confirmation_to_ignore = FALSE;
+
+#if BEAGLEBONE_RS485_CAPE
+    ctx_rtu->gpio = -1;
+#endif
 
     return ctx;
 }

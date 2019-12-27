@@ -2,7 +2,7 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Define to 1 if you have the `accept4' function. */
-#define HAVE_ACCEPT4 1
+#define HAVE_ACCEPT4 0
 
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #define HAVE_ARPA_INET_H 1
@@ -12,11 +12,15 @@
 
 /* Define to 1 if you have the declaration of `TIOCM_RTS', and to 0 if you
    don't. */
-#define HAVE_DECL_TIOCM_RTS @HAVE_DECL_TIOCM_RTS@
+#define HAVE_DECL_TIOCM_RTS 1
 
 /* Define to 1 if you have the declaration of `TIOCSRS485', and to 0 if you
    don't. */
 #define HAVE_DECL_TIOCSRS485 1
+
+/* Define to 1 if you use Beaglebone, and to 0 if you
+   don't. */
+#define BEAGLEBONE_RS485_CAPE @BEAGLEBONE_RS485_CAPE@
 
 /* Define to 1 if you have the declaration of `__CYGWIN__', and to 0 if you
    don't. */

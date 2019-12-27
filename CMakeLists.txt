@@ -8,7 +8,7 @@ project (libmodbus)
 configure_file(${CMAKE_SOURCE_DIR}/src/modbus-version.h.in
         ${CMAKE_BINARY_DIR}/include/modbus-version.h)
 
-option(HAVE_DECL_TIOCM_RTS "TIOM RTS flag" OFF)
+option(BEAGLEBONE_RS485_CAPE "Use  Beaglebone RS485 cape" ON)
 
 configure_file(${CMAKE_SOURCE_DIR}/config-cmake.h.in
         ${CMAKE_BINARY_DIR}/include/config.h)

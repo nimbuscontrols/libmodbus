@@ -63,7 +63,7 @@ typedef struct _modbus_rtu {
 #if HAVE_DECL_TIOCSRS485
     int serial_mode;
 #endif
-#if HAVE_DECL_TIOCM_RTS
+#if HAVE_DECL_TIOCM_RTS && !BEAGLEBONE_RS485_CAPE
     int rts;
     int rts_delay;
     int onebyte_time;
@@ -71,6 +71,10 @@ typedef struct _modbus_rtu {
 #endif
     /* To handle many slaves on the same link */
     int confirmation_to_ignore;
+#if BEAGLEBONE_RS485_CAPE
+    /* For use gpio as rts */
+    int gpio;
+#endif
 } modbus_rtu_t;
 
 #endif /* MODBUS_RTU_PRIVATE_H */
